@@ -97,37 +97,37 @@ namespace NZWalks.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = regionsDto.Id }, regionsDto);
         }
 
-        [HttpPut]
-        public IActionResult Update(Guid id, Region region)
+        [HttpPut("{id}")]
+        public IActionResult Update(Guid id, [FromBody] Region updateRegionRequestDto)
         {
-            if(id != region.Id)
-            {
-                return BadRequest();
-            }
-            dbContext.Entry(region).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            // Verifica se a região com o ID especificado existe
+            var regionDomainModel = dbContext.Regions.FirstOrDefault(x => x.Id == id);
 
-            try
+            if (regionDomainModel == null)
             {
-                dbContext.SaveChanges();
+                return NotFound();
             }
-            catch(DbUpdateConcurrencyException)
+
+            // Atualiza as propriedades da região com base nos valores fornecidos no DTO de atualização
+            regionDomainModel.Code = updateRegionRequestDto.Code;
+            regionDomainModel.Name = updateRegionRequestDto.Name;
+            regionDomainModel.RegionImage = updateRegionRequestDto.RegionImage;
+
+            dbContext.Regions.Update(regionDomainModel);
+            dbContext.SaveChanges();
+
+            // Mapeia o modelo de domínio de volta para um DTO
+            var regionDto = new RegionDto
             {
-                if (!RegionAvailable(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    return Conflict();
-                }
-            }
-            return Ok();
+                Id = regionDomainModel.Id,
+                Code = regionDomainModel.Code,
+                Name = regionDomainModel.Name,
+                RegionImage = regionDomainModel.RegionImage
+            };
+
+            return Ok(regionDto);
         }
 
-        private bool RegionAvailable(Guid id)
-        {
-            return dbContext.Regions.Any(x => x.Id == id);
-        }
 
 
 
